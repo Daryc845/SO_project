@@ -39,9 +39,12 @@ def get_icon_from_exe(exe_path):
             hdc_mem = hdc.CreateCompatibleDC()
             hdc_mem.SelectObject(bmp)
             win32gui.DrawIconEx(hdc_mem.GetSafeHdc(), 0, 0, ico, 32, 32, 0, None, 3)
+
+            # Crear una imagen con transparencia
             bmpinfo = bmp.GetInfo()
             bmpstr = bmp.GetBitmapBits(True)
-            img = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
+            img = Image.frombuffer('RGBA', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRA', 0, 1)
+
             DestroyIcon(ico)
             buffer = io.BytesIO()
             img.save(buffer, format='PNG')
