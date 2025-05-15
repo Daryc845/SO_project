@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 # Variables globales
 process_data = []
-ordenamiento = "cpu"  # opciones: nombre, cpu, memoria
+ordenamiento = "nombre"  # opciones: nombre, cpu, memoria
 forma = "desc"        # opciones: asc, desc
 
 # Actualización de procesos en segundo plano
@@ -29,18 +29,28 @@ def actualizar_procesos():
 # Ordenamientos
 def get_processes():
     process_matrix = []
+    estado_traducciones = {
+        "running": "En ejecución",
+        "sleeping": "Durmiendo",
+        "stopped": "Detenido",
+        "zombie": "Zombie",
+        "idle": "Inactivo",
+        "dead": "Muerto",
+        "waiting": "Esperando"
+    }
+
     for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info', 'exe', 'create_time', 'status']):
         try:
             info = proc.info
             pid = info['pid']
             name = info['name']
-            status = info['status']  # Estado del proceso
+            status = estado_traducciones.get(info['status'], "Desconocido")  # Traducir el estado
             cpu = info['cpu_percent']
             memory = round(info['memory_info'].rss / (1024 * 1024), 2)
             icon_path = f"/icon/{pid}"
             create_time = info['create_time']
             now = time.time()
-            uptime = str(datetime.timedelta(seconds=int(now - create_time)))
+            uptime = int(now - create_time)  # Tiempo de ejecución en segundos
 
             # Agregar el estado después del nombre
             process_matrix.append([pid, icon_path, name, status, cpu, memory, uptime])
@@ -51,9 +61,10 @@ def get_processes():
     sort_index = {
         "pid": 0,
         "nombre": 2,
-        "estado": 3,  # Nuevo índice para ordenar por estado
+        "estado": 3,
         "cpu": 4,
-        "memoria": 5
+        "memoria": 5,
+        "tiempo": 6  # Nuevo índice para ordenar por tiempo de ejecución
     }.get(ordenamiento, 4)
 
     process_matrix.sort(key=lambda x: x[sort_index], reverse=(forma == "desc"))
