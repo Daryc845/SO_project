@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Administrador de Tareas Simple</title>
+    <style>
+        body { font-family: Arial; background: #f4f4f4; padding: 20px; }
+        button { padding: 10px 20px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { padding: 10px; border: 1px solid #ccc; text-align: left; }
+        img { width: 32px; height: 32px; }
+    </style>
+</head>
+<body>
+    <h1>Administrador de Tareas</h1>
+    <button onclick="cargarProcesos()">Cargar Procesos</button>
+    <table>
+        <thead>
+            <tr>
+                <th>Icono</th>
+                <th>Nombre</th>
+                <th>PID</th>
+                <th>CPU (%)</th>
+                <th>Memoria (MB)</th>
+            </tr>
+        </thead>
+        <tbody id="tablaProcesos">
+        </tbody>
+    </table>
+
+    <script>
+        function cargarProcesos() {
+            fetch("/procesos")
+                .then(res => res.json())
+                .then(data => {
+                    const tabla = document.getElementById("tablaProcesos");
+                    tabla.innerHTML = "";
+                    data.forEach(proc => {
+                        const fila = document.createElement("tr");
+                        fila.innerHTML = `
+                            <td><img src="/icon/${proc.pid}" onerror="this.src='/static/default.png'"></td>
+                            <td>${proc.name}</td>
+                            <td>${proc.pid}</td>
+                            <td>${proc.cpu}</td>
+                            <td>${proc.memory}</td>
+                        `;
+                        tabla.appendChild(fila);
+                    });
+                });
+        }
+    </script>
+</body>
+</html>
