@@ -1,6 +1,8 @@
 from flask import Flask, render_template, jsonify, send_file
 import psutil
 import os
+from threading import Thread
+import time
 from win32gui import DestroyIcon
 from win32ui import CreateDCFromHandle, CreateBitmap
 from win32con import SRCCOPY
@@ -10,6 +12,29 @@ import io
 import win32gui
 
 app = Flask(__name__)
+
+# Variable global para almacenar los procesos
+process_data = []
+ordenamiento = "cpu"  # opciones: nombre, cpu, memoria
+forma = "desc"            # opciones: asc, desc
+
+# Función para actualizar los procesos en segundo plano
+def actualizar_procesos():
+    global process_data
+    while True:
+        process_data = get_processes()
+        time.sleep(1)  # Actualizar cada segundo
+
+
+
+def ordenar_por_nombre(lista):
+    return sorted(lista, key=lambda x: x['name'].lower())
+
+def ordenar_por_cpu(lista):
+    return sorted(lista, key=lambda x: x['cpu'])
+
+def ordenar_por_memoria(lista):
+    return sorted(lista, key=lambda x: x['memory'])
 
 # Obtener los procesos del sistema
 def get_processes():
@@ -25,6 +50,19 @@ def get_processes():
             })
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
+
+    # Ordenar según la variable global
+    global ordenamiento, forma
+    if ordenamiento == "nombre":
+        process_list = ordenar_por_nombre(process_list)
+    elif ordenamiento == "cpu":
+        process_list = ordenar_por_cpu(process_list)
+    elif ordenamiento == "memoria":
+        process_list = ordenar_por_memoria(process_list)
+
+    if forma == "desc":
+        process_list.reverse()
+
     return process_list
 
 # Extraer el ícono de un ejecutable
@@ -54,13 +92,16 @@ def get_icon_from_exe(exe_path):
         print(f"Error obteniendo icono: {e}")
     return None
 
+
 @app.route("/")
 def index():
-    return render_template("index.html")
+    global process_data
+    return render_template("index.html", procesos=process_data)
 
 @app.route("/procesos")
 def procesos():
-    return jsonify(get_processes())
+    global process_data
+    return jsonify(process_data)
 
 @app.route("/icon/<int:pid>")
 def icon(pid):
@@ -75,5 +116,15 @@ def icon(pid):
         pass
     return send_file("static/default.png", mimetype="image/png")
 
+@app.route("/boton", methods=["POST"])
+def boton():
+    print("presionado")
+    return jsonify({"status": "Botón presionado"})
+
 if __name__ == "__main__":
+    # Iniciar el hilo para actualizar los procesos
+    hilo = Thread(target=actualizar_procesos, daemon=True)
+    hilo.start()
+
+    # Iniciar la aplicación Flask
     app.run(debug=True)

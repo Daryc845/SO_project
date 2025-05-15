@@ -1,8 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Administrador de Tareas Simple</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Procesos</title>
+    <meta http-equiv="refresh" content="1"> <!-- Recarga automática cada segundo -->
     <style>
         body { font-family: Arial; background: #f4f4f4; padding: 20px; }
         button { padding: 10px 20px; margin-bottom: 20px; }
@@ -12,8 +14,10 @@
     </style>
 </head>
 <body>
-    <h1>Administrador de Tareas</h1>
-    <button onclick="cargarProcesos()">Cargar Procesos</button>
+    <h1>Lista de Procesos</h1>
+    <form action="/boton" method="post">
+        <button type="submit">Presionar Botón</button>
+    </form>
     <table>
         <thead>
             <tr>
@@ -24,30 +28,17 @@
                 <th>Memoria (MB)</th>
             </tr>
         </thead>
-        <tbody id="tablaProcesos">
+        <tbody>
+            {% for proc in procesos %}
+            <tr>
+                <td><img src="/icon/{{ proc.pid }}" onerror="this.src='/static/default.png'"></td>
+                <td>{{ proc.name }}</td>
+                <td>{{ proc.pid }}</td>
+                <td>{{ proc.cpu }}</td>
+                <td>{{ proc.memory }}</td>
+            </tr>
+            {% endfor %}
         </tbody>
     </table>
-
-    <script>
-        function cargarProcesos() {
-            fetch("/procesos")
-                .then(res => res.json())
-                .then(data => {
-                    const tabla = document.getElementById("tablaProcesos");
-                    tabla.innerHTML = "";
-                    data.forEach(proc => {
-                        const fila = document.createElement("tr");
-                        fila.innerHTML = `
-                            <td><img src="/icon/${proc.pid}" onerror="this.src='/static/default.png'"></td>
-                            <td>${proc.name}</td>
-                            <td>${proc.pid}</td>
-                            <td>${proc.cpu}</td>
-                            <td>${proc.memory}</td>
-                        `;
-                        tabla.appendChild(fila);
-                    });
-                });
-        }
-    </script>
 </body>
 </html>
