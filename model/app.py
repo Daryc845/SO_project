@@ -10,62 +10,56 @@ import ctypes
 from PIL import Image
 import io
 import win32gui
+import datetime
 
 app = Flask(__name__)
 
-# Variable global para almacenar los procesos
+# Variables globales
 process_data = []
 ordenamiento = "cpu"  # opciones: nombre, cpu, memoria
-forma = "desc"            # opciones: asc, desc
+forma = "desc"        # opciones: asc, desc
 
-# Función para actualizar los procesos en segundo plano
+# Actualización de procesos en segundo plano
 def actualizar_procesos():
     global process_data
     while True:
         process_data = get_processes()
-        time.sleep(1)  # Actualizar cada segundo
+        time.sleep(1)
 
-
-
-def ordenar_por_nombre(lista):
-    return sorted(lista, key=lambda x: x['name'].lower())
-
-def ordenar_por_cpu(lista):
-    return sorted(lista, key=lambda x: x['cpu'])
-
-def ordenar_por_memoria(lista):
-    return sorted(lista, key=lambda x: x['memory'])
-
-# Obtener los procesos del sistema
+# Ordenamientos
 def get_processes():
-    process_list = []
-    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info', 'exe']):
+    process_matrix = []
+    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info', 'exe', 'create_time', 'status']):
         try:
             info = proc.info
-            process_list.append({
-                'pid': info['pid'],
-                'name': info['name'],
-                'cpu': info['cpu_percent'],
-                'memory': round(info['memory_info'].rss / (1024 * 1024), 2),  # en MB
-            })
+            pid = info['pid']
+            name = info['name']
+            status = info['status']  # Estado del proceso
+            cpu = info['cpu_percent']
+            memory = round(info['memory_info'].rss / (1024 * 1024), 2)
+            icon_path = f"/icon/{pid}"
+            create_time = info['create_time']
+            now = time.time()
+            uptime = str(datetime.timedelta(seconds=int(now - create_time)))
+
+            # Agregar el estado después del nombre
+            process_matrix.append([pid, icon_path, name, status, cpu, memory, uptime])
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
 
-    # Ordenar según la variable global
     global ordenamiento, forma
-    if ordenamiento == "nombre":
-        process_list = ordenar_por_nombre(process_list)
-    elif ordenamiento == "cpu":
-        process_list = ordenar_por_cpu(process_list)
-    elif ordenamiento == "memoria":
-        process_list = ordenar_por_memoria(process_list)
+    sort_index = {
+        "pid": 0,
+        "nombre": 2,
+        "estado": 3,  # Nuevo índice para ordenar por estado
+        "cpu": 4,
+        "memoria": 5
+    }.get(ordenamiento, 4)
 
-    if forma == "desc":
-        process_list.reverse()
+    process_matrix.sort(key=lambda x: x[sort_index], reverse=(forma == "desc"))
+    return process_matrix
 
-    return process_list
-
-# Extraer el ícono de un ejecutable
+# Extraer ícono del ejecutable
 def get_icon_from_exe(exe_path):
     try:
         large, _ = win32gui.ExtractIconEx(exe_path, 0)
@@ -78,7 +72,6 @@ def get_icon_from_exe(exe_path):
             hdc_mem.SelectObject(bmp)
             win32gui.DrawIconEx(hdc_mem.GetSafeHdc(), 0, 0, ico, 32, 32, 0, None, 3)
 
-            # Crear una imagen con transparencia
             bmpinfo = bmp.GetInfo()
             bmpstr = bmp.GetBitmapBits(True)
             img = Image.frombuffer('RGBA', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRA', 0, 1)
@@ -92,7 +85,7 @@ def get_icon_from_exe(exe_path):
         print(f"Error obteniendo icono: {e}")
     return None
 
-
+# Rutas Flask
 @app.route("/")
 def index():
     global process_data
@@ -122,9 +115,6 @@ def boton():
     return jsonify({"status": "Botón presionado"})
 
 if __name__ == "__main__":
-    # Iniciar el hilo para actualizar los procesos
     hilo = Thread(target=actualizar_procesos, daemon=True)
     hilo.start()
-
-    # Iniciar la aplicación Flask
     app.run(debug=True)

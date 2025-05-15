@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Procesos</title>
-    <meta http-equiv="refresh" content="1"> <!-- Recarga automática cada segundo -->
+    <meta http-equiv="refresh" content="1">
     <style>
         body { font-family: Arial; background: #f4f4f4; padding: 20px; }
         button { padding: 10px 20px; margin-bottom: 20px; }
@@ -21,21 +21,25 @@
     <table>
         <thead>
             <tr>
+                <th>PID</th>
                 <th>Icono</th>
                 <th>Nombre</th>
-                <th>PID</th>
+                <th>Estado</th>
                 <th>CPU (%)</th>
                 <th>Memoria (MB)</th>
+                <th>Tiempo de Ejecución</th>
             </tr>
         </thead>
         <tbody>
-            {% for proc in procesos %}
+            {% for fila in procesos %}
             <tr>
-                <td><img src="/icon/{{ proc.pid }}" onerror="this.src='/static/default.png'"></td>
-                <td>{{ proc.name }}</td>
-                <td>{{ proc.pid }}</td>
-                <td>{{ proc.cpu }}</td>
-                <td>{{ proc.memory }}</td>
+                <td>{{ fila[0] }}</td>
+                <td><img src="{{ fila[1] }}" onerror="this.src='/static/default.png'"></td>
+                <td>{{ fila[2] }}</td>
+                <td>{{ fila[3] }}</td> <!-- Mostrar el estado -->
+                <td>{{ fila[4] }}</td>
+                <td>{{ fila[5] }}</td>
+                <td>{{ fila[6] }}</td>
             </tr>
             {% endfor %}
         </tbody>
