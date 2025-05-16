@@ -19,64 +19,16 @@ app = Flask(__name__)
 
 # Variables globales
 process_data = []
-ordenamiento = "nombre"  # opciones: nombre, cpu, memoria
-forma = "desc"        # opciones: asc, desc
+ordenamiento = "cpu"  # opciones: nombre, cpu, memoria, tiempo
+forma = "desc"           # opciones: asc, desc
+icon_cache = {}          # Caché global para íconos
+previous_process_data = {}  # Caché para datos de procesos anteriores
 
-# Actualización de procesos en segundo plano
-def actualizar_procesos():
-    global process_data
-    while True:
-        view.insert_values(get_processes())
-        #process_data = get_processes()
-        print("HOLA")
-        time.sleep(1)
-
-# Ordenamientos
-def get_processes():
-    process_matrix = []
-    estado_traducciones = {
-        "running": "En ejecución",
-        "sleeping": "Durmiendo",
-        "stopped": "Detenido",
-        "zombie": "Zombie",
-        "idle": "Inactivo",
-        "dead": "Muerto",
-        "waiting": "Esperando"
-    }
-
-    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info', 'exe', 'create_time', 'status']):
-        try:
-            info = proc.info
-            pid = info['pid']
-            name = info['name']
-            status = estado_traducciones.get(info['status'], "Desconocido")  # Traducir el estado
-            cpu = info['cpu_percent']
-            memory = round(info['memory_info'].rss / (1024 * 1024), 2)
-            icon_path = f"/icon/{pid}"
-            create_time = info['create_time']
-            now = time.time()
-            uptime = int(now - create_time)  # Tiempo de ejecución en segundos
-
-            # Agregar el estado después del nombre
-            process_matrix.append([pid, icon_path, name, status, cpu, memory, uptime])
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-
-    global ordenamiento, forma
-    sort_index = {
-        "pid": 0,
-        "nombre": 2,
-        "estado": 3,
-        "cpu": 4,
-        "memoria": 5,
-        "tiempo": 6  # Nuevo índice para ordenar por tiempo de ejecución
-    }.get(ordenamiento, 4)
-
-    process_matrix.sort(key=lambda x: x[sort_index], reverse=(forma == "desc"))
-    return process_matrix
-
-# Extraer ícono del ejecutable
-def get_icon_from_exe(exe_path):
+# Obtener ícono del ejecutable
+def get_icon_from_exe(exe_path, pid, process_name):
+    key = (pid, process_name)  # Usar una combinación de PID y nombre como clave
+    if key in icon_cache:  # Si el ícono ya está en caché, úsalo
+        return icon_cache[key]
     try:
         large, _ = win32gui.ExtractIconEx(exe_path, 0)
         if large:
@@ -96,39 +48,79 @@ def get_icon_from_exe(exe_path):
             buffer = io.BytesIO()
             img.save(buffer, format='PNG')
             buffer.seek(0)
+            icon_cache[key] = buffer  # Almacenar en caché
             return buffer
     except Exception as e:
         print(f"Error obteniendo icono: {e}")
     return None
 
-# Rutas Flask
-@app.route("/")
-def index():
+# Obtener procesos
+def get_processes():
+    global previous_process_data, ordenamiento, forma
+    current_process_data = {}
+    process_matrix = []
+    estado_traducciones = {
+        "running": "En ejecución",
+        "sleeping": "Durmiendo",
+        "stopped": "Detenido",
+        "zombie": "Zombie",
+        "idle": "Inactivo",
+        "dead": "Muerto",
+        "waiting": "Esperando"
+    }
+
+    for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info', 'exe', 'create_time', 'status']):
+        try:
+            info = proc.info
+            pid = info['pid']
+            name = info['name']
+            status = estado_traducciones.get(info['status'], "Desconocido")
+            cpu = info['cpu_percent']
+            memory = round(info['memory_info'].rss / (1024 * 1024), 2)
+            icon_path = f"/icon/{pid}"
+            create_time = info['create_time']
+            now = time.time()
+            uptime_seconds = int(now - create_time)
+            uptime = f"{uptime_seconds // 60}:{uptime_seconds % 60:02d}"  # Formato minutos:segundos
+
+            # Crear un hash único para el proceso actual
+            current_process_data[pid] = (name, status, cpu, memory, uptime)
+
+            # Actualizar o agregar procesos
+            if pid not in previous_process_data or previous_process_data[pid] != current_process_data[pid]:
+                process_matrix.append([pid, icon_path, name, status, cpu, memory, uptime])
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+
+    # Eliminar procesos que ya no existen
+    for pid in list(previous_process_data.keys()):
+        if pid not in current_process_data:
+            del previous_process_data[pid]
+
+    # Actualizar el estado anterior
+    previous_process_data = current_process_data
+
+    # Ordenar solo si el ordenamiento ha cambiado
+    sort_index = {
+        "pid": 0,
+        "nombre": 2,
+        "estado": 3,
+        "cpu": 4,
+        "memoria": 5,
+        "tiempo": 6
+    }.get(ordenamiento, 4)
+
+    if ordenamiento != "tiempo" or forma != "desc":
+        process_matrix.sort(key=lambda x: x[sort_index], reverse=(forma == "desc"))
+
+    return process_matrix
+
+# Actualización de procesos en segundo plano
+def actualizar_procesos():
     global process_data
-    return render_template("index.html", procesos=process_data)
-
-@app.route("/procesos")
-def procesos():
-    global process_data
-    return jsonify(process_data)
-
-@app.route("/icon/<int:pid>")
-def icon(pid):
-    try:
-        p = psutil.Process(pid)
-        exe = p.exe()
-        if os.path.exists(exe):
-            icon = get_icon_from_exe(exe)
-            if icon:
-                return send_file(icon, mimetype="image/png")
-    except:
-        pass
-    return send_file("static/default.png", mimetype="image/png")
-
-@app.route("/boton", methods=["POST"])
-def boton():
-    print("presionado")
-    return jsonify({"status": "Botón presionado"})
+    while True:
+        process_data = get_processes()
+        time.sleep(1)
 
 if __name__ == "__main__":
     view = TaskManagerApp()
@@ -137,10 +129,10 @@ if __name__ == "__main__":
         while True:
             data = get_processes()
             view.after(0, lambda d=data: view.insert_values(d))
-            time.sleep(0.01)
+            time.sleep(1)
 
     thread = Thread(target=update_and_refresh, daemon=True)
     thread.start()
 
     view.mainloop()
-    
+
