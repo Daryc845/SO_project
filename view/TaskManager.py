@@ -15,65 +15,96 @@ class TaskManagerApp(tk.Tk):
         header = tk.Frame(self, bg="#2d3e50", height=70)
         header.pack(fill=tk.X, side=tk.TOP)
 
-        # Botón 2 con menú desplegable (De mayor a menor, De menor a mayor)
-        filterButton = SpecialButton(header, "🧹 Filtrar", 120, "#AA4AE2", "#FF00EA")
-        filterButton.add_commands(("PID", "Nombre", "Tiempo de ejecución", "CPU", "RAM"))
-        filterButton.pack(side=tk.RIGHT, padx=7, pady=10)
-        
-        orderButton = SpecialButton(header, "↕ Ordenar", 120, "#FF9900", "#E2DF4A")
-        orderButton.add_commands(("Descendente", "Ascendente"))
-        orderButton.pack(side=tk.RIGHT, padx=7, pady=10)
+        #Botones de cabecera
+        self.add_buttons(header)
         
         # Barra de búsqueda centrada
-        search_frame = tk.Frame(header, bg="#2d3e50")
+        self.set_search_section(header)
         
-        searchButton = SpecialButton(search_frame, "🔍", 50, "#4A90E2", "#00E1FF")
-        searchButton.pack(side=tk.LEFT, padx=5)
-        
-        search_entry = tk.Entry(
-            search_frame,
-            width=38,
-            font=("Segoe UI", 11),
-            bg="#f7f9fa",
-            fg="#222",
-            relief=tk.FLAT,
-            bd=2,
-            highlightthickness=1,
-            highlightbackground="#b0b0b0"
-        )
-        search_entry.pack(side=tk.LEFT, padx=5, pady=10)
-        
-        search_frame.place(relx=0, rely=0.5, anchor=tk.W)
-
         # Tabla de procesos
+        self.set_process_table_style()
+
+        # Menú contextual para la tabla
+        self.set_process_table_structure()
+        
+    def set_process_table_structure(self):
+        self.context_menu = Menu(self, tearoff=0, bg="#f7f9fa", fg="#222", font=("Segoe UI", 10))
+        self.context_menu.add_command(label="Reanudar proceso")
+        self.context_menu.add_command(label="Pausar proceso")
+        self.context_menu.add_command(label="Finalizar proceso")
+        self.tree.bind("<Button-3>", self.show_context_menu)
+        
+    def set_process_table_style(self):
         style = ttk.Style()
         style.theme_use("clam")
         style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"), background="#e0e0e0", foreground="#222")
         style.configure("Treeview", font=("Segoe UI", 10), background="#f7f9fa", foreground="#222", rowheight=28, fieldbackground="#f7f9fa")
         style.map("Treeview", background=[("selected", "#b3d1ff")])
 
-        columns = ("PID", "Icono", "Nombre", "Estado", "CPU", "RAM", "Tiempo de ejecución")
+        columns = ("PID", "Icono", "Nombre", "Estado", "%CPU", "%RAM", "Tiempo de ejecución")
         self.tree = ttk.Treeview(self, columns=columns, show="headings", height=15)
         for col in columns:
             self.tree.heading(col, text=col)
             self.tree.column(col, anchor=tk.CENTER, width=140)
         self.tree.pack(fill=tk.BOTH, expand=True, padx=20, pady=(10, 20))
+    
+    def set_search_section(self, header):
+        search_frame = tk.Frame(header, bg="#2d3e50")
+        searchButton = SpecialButton(search_frame, "🔍", 50, "#4A90E2", "#00E1FF")
+        searchButton.pack(side=tk.LEFT, padx=5)
+        search_entry_frame = tk.Frame(search_frame, bg="#242424")
+        search_entry_frame.pack(side=tk.LEFT, padx=10, pady=20)
+        search_entry = tk.Entry(
+            search_entry_frame,
+            width=38,
+            font=("Segoe UI", 11),
+            bg="#242424",
+            fg="#d1d1d1",
+            relief=tk.FLAT,
+            bd=2,
+            highlightthickness=2,
+            highlightbackground="#00eeff",
+            highlightcolor="#FFC400",
+            insertbackground="#ffffff"
+        )
+        
+        self.add_placeholder(search_entry)
+        
+        search_entry.pack()
+        search_frame.place(relx=0, rely=0.5, anchor=tk.W)
+        
+    def add_placeholder(self, search_entry):
+        search_entry.insert(0, "Digite el PID o nombre del proceso...")  # Placeholder inicial
 
-        # Ejemplo de datos
-        example_data = [
-            (1234, "chrome.exe", "Activo", "12%", "200MB", "00:10:23"),
-            (5678, "python.exe", "Suspendido", "5%", "150MB", "00:05:12"),
-            (9101, "explorer.exe", "Activo", "2%", "100MB", "00:20:45"),
-        ]
-        for row in example_data:
+        def on_entry_focus_in(event):
+            if search_entry.get() == "Digite el PID o nombre del proceso...":
+                search_entry.delete(0, tk.END)
+                search_entry.config(fg="#ffffff")
+
+        def on_entry_focus_out(event):
+            if not search_entry.get():
+                search_entry.insert(0, "Digite el PID o nombre del proceso...")
+                search_entry.config(fg="#ffffff")
+
+        search_entry.bind("<FocusIn>", on_entry_focus_in)
+        search_entry.bind("<FocusOut>", on_entry_focus_out)
+    
+    def add_buttons(self, header):
+        filterButton = SpecialButton(header, "🧹 Filtrar", 120, "#AA4AE2", "#FF00EA")
+        filterButton.add_commands(("Por PID", "Por Nombre", "Por Tiempo de ejecución", "Por %CPU", "Por %RAM"))
+        filterButton.pack(side=tk.RIGHT, padx=7, pady=10)
+        
+        orderButton = SpecialButton(header, "↕ Ordenar", 120, "#FF9900", "#E2DF4A")
+        orderButton.add_commands(("Descendente", "Ascendente"))
+        orderButton.pack(side=tk.RIGHT, padx=7, pady=10)
+    
+    def insert_values(self, matrix):
+        # Elimina todas las filas actuales
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        # Inserta los nuevos datos
+        for row in matrix:
             self.tree.insert("", tk.END, values=row)
-
-        # Menú contextual para la tabla
-        self.context_menu = Menu(self, tearoff=0, bg="#f7f9fa", fg="#222", font=("Segoe UI", 10))
-        self.context_menu.add_command(label="Reanudar proceso")
-        self.context_menu.add_command(label="Pausar proceso")
-        self.context_menu.add_command(label="Finalizar proceso")
-        self.tree.bind("<Button-3>", self.show_context_menu)
 
     def show_context_menu(self, event):
         row_id = self.tree.identify_row(event.y)
@@ -82,9 +113,8 @@ class TaskManagerApp(tk.Tk):
             self.context_menu.tk_popup(event.x_root, event.y_root)
             
 class SpecialButton(tk.Menubutton):
-    def __init__(self, root, text, width, primaryColor, secondaryColor):
-        #.---------------------------------------
-        self.gradient_photo = self.create_gradient_image(width, 36, primaryColor, secondaryColor)
+    def __init__(self, root, text, width, primary_color, secondary_color):
+        self.gradient_photo = self.create_gradient_image(width, 36, primary_color, secondary_color)
         self.gradient_photo_hover = self.create_gradient_image(width, 36, "#505050", "#292929")
         super().__init__(
             root,
@@ -92,8 +122,8 @@ class SpecialButton(tk.Menubutton):
             relief=tk.FLAT,
             bg="#FFFFFF",
             fg="white",
-            activebackground=secondaryColor,
-            activeforeground=secondaryColor,
+            activebackground=secondary_color,
+            activeforeground=secondary_color,
             font=("Segoe UI", 11, "bold"),
             bd=0,
             cursor="hand2",
@@ -102,6 +132,13 @@ class SpecialButton(tk.Menubutton):
             padx=2, 
             pady=2 
         )
+        self.secondary_color = secondary_color;
+        self.set_events()
+        
+        self.menu = Menu(self, relief=tk.FLAT, tearoff=0, bg="#111111", fg="#ffffff", font=("Segoe UI", 10))
+        self["menu"] = self.menu
+        
+    def set_events(self):
         def on_enter(event):
             self.config(image=self.gradient_photo_hover)
 
@@ -111,12 +148,17 @@ class SpecialButton(tk.Menubutton):
         self.bind("<Enter>", on_enter)
         self.bind("<Leave>", on_leave)
         
-        self.menu = Menu(self, relief=tk.FLAT, tearoff=0, bg="#f7f9fa", fg="#222", font=("Segoe UI", 10))
-        self["menu"] = self.menu
-        
     def add_commands(self, commands):
+        bold_font = ("Segoe UI", 10, "bold")  # Fuente en negrita
         for command in commands:
-            self.menu.add_command(label=command)
+            self.menu.add_command(
+                label=command,
+                background="#111111",
+                foreground="#ffffff",
+                activebackground="#333333",
+                activeforeground=self.secondary_color,
+                font=bold_font 
+            )
         
     def create_gradient_image(self, width, height, color1, color2):
         base = Image.new('RGB', (width, height), color1)

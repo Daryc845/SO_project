@@ -1,6 +1,7 @@
 from flask import Flask, render_template, jsonify, send_file
 import psutil
 import os
+import sys
 from threading import Thread
 import time
 from win32gui import DestroyIcon
@@ -11,6 +12,8 @@ from PIL import Image
 import io
 import win32gui
 import datetime
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from view.TaskManager import TaskManagerApp
 
 app = Flask(__name__)
 
@@ -23,7 +26,9 @@ forma = "desc"        # opciones: asc, desc
 def actualizar_procesos():
     global process_data
     while True:
-        process_data = get_processes()
+        view.insert_values(get_processes())
+        #process_data = get_processes()
+        print("HOLA")
         time.sleep(1)
 
 # Ordenamientos
@@ -126,6 +131,16 @@ def boton():
     return jsonify({"status": "Botón presionado"})
 
 if __name__ == "__main__":
-    hilo = Thread(target=actualizar_procesos, daemon=True)
-    hilo.start()
-    app.run(debug=True)
+    view = TaskManagerApp()
+
+    def update_and_refresh():
+        while True:
+            data = get_processes()
+            view.after(0, lambda d=data: view.insert_values(d))
+            time.sleep(0.01)
+
+    thread = Thread(target=update_and_refresh, daemon=True)
+    thread.start()
+
+    view.mainloop()
+    
