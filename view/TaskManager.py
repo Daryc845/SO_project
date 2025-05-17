@@ -8,6 +8,7 @@ class TaskManagerApp(tk.Tk):
         self.title("Task Manager")
         self.geometry("950x540")
         self.configure(bg="#f7f9fa")
+        self.icon_images = {}  # Para almacenar los íconos
         self.create_widgets()
 
     def create_widgets(self):
@@ -99,12 +100,18 @@ class TaskManagerApp(tk.Tk):
         orderButton.pack(side=tk.RIGHT, padx=7, pady=10)
     
     def insert_values(self, matrix):
-        # Elimina todas las filas actuales
         for item in self.tree.get_children():
             self.tree.delete(item)
-        # Inserta los nuevos datos
+            
         for row in matrix:
-            self.tree.insert("", tk.END, values=row)
+            pid, icon, name, status, cpu, memory, uptime = row
+            # Convertir la imagen PIL a PhotoImage
+            if isinstance(icon, Image.Image):
+                photo = ImageTk.PhotoImage(icon)
+                self.icon_images[pid] = photo
+                self.tree.insert("", tk.END, values=(pid, "", name, status, cpu, memory, uptime), image=photo)
+            else:
+                self.tree.insert("", tk.END, values=row)
 
     def show_context_menu(self, event):
         row_id = self.tree.identify_row(event.y)
