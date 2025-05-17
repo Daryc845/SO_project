@@ -3,11 +3,14 @@ from tkinter import ttk, Menu
 from PIL import Image, ImageTk
 
 class TaskManagerApp(tk.Tk):
-    def __init__(self):
+    def __init__(self, set_order_method, set_order_cryteria, set_search_cryteria):
         super().__init__()
         self.title("Task Manager")
         self.geometry("950x540")
         self.configure(bg="#f7f9fa")
+        self.set_order_method = set_order_method
+        self.set_order_cryteria = set_order_cryteria
+        self.set_search_cryteria = set_search_cryteria
         self.icon_images = {}  # Para almacenar los íconos
         self.create_widgets()
 
@@ -51,7 +54,8 @@ class TaskManagerApp(tk.Tk):
     
     def set_search_section(self, header):
         search_frame = tk.Frame(header, bg="#2d3e50")
-        searchButton = SpecialButton(search_frame, "🔍", 50, "#4A90E2", "#00E1FF")
+        searchButton = SpecialButton(search_frame, "🔍", 50, "#4A90E2", "#00E1FF", self.set_search_cryteria)
+        
         searchButton.pack(side=tk.LEFT, padx=5)
         search_entry_frame = tk.Frame(search_frame, bg="#242424")
         search_entry_frame.pack(side=tk.LEFT, padx=10, pady=20)
@@ -68,6 +72,7 @@ class TaskManagerApp(tk.Tk):
             highlightcolor="#FFC400",
             insertbackground="#ffffff"
         )
+        searchButton.bind("<Button-1>", lambda event: self.set_search_cryteria(search_entry.get()))
         
         self.add_placeholder(search_entry)
         
@@ -91,12 +96,12 @@ class TaskManagerApp(tk.Tk):
         search_entry.bind("<FocusOut>", on_entry_focus_out)
     
     def add_buttons(self, header):
-        filterButton = SpecialButton(header, "🧹 Filtrar", 120, "#AA4AE2", "#FF00EA")
-        filterButton.add_commands(("Por PID", "Por Nombre", "Por Tiempo de ejecución", "Por %CPU", "Por %RAM"))
+        filterButton = SpecialButton(header, "🧹 Filtrar", 120, "#AA4AE2", "#FF00EA", self.set_order_cryteria)
+        filterButton.add_commands({"Por PID":"pid", "Por Nombre":"name", "Por %CPU":"cpu", "Por Tiempo de ejecución":"time", "Por %RAM":"ram"})
         filterButton.pack(side=tk.RIGHT, padx=7, pady=10)
         
-        orderButton = SpecialButton(header, "↕ Ordenar", 120, "#FF9900", "#E2DF4A")
-        orderButton.add_commands(("Descendente", "Ascendente"))
+        orderButton = SpecialButton(header, "↕ Ordenar", 120, "#FF9900", "#E2DF4A", self.set_order_method)
+        orderButton.add_commands({"Descendente":"desc", "Ascendente":"asc"})
         orderButton.pack(side=tk.RIGHT, padx=7, pady=10)
     
     def insert_values(self, matrix):
@@ -120,9 +125,10 @@ class TaskManagerApp(tk.Tk):
             self.context_menu.tk_popup(event.x_root, event.y_root)
             
 class SpecialButton(tk.Menubutton):
-    def __init__(self, root, text, width, primary_color, secondary_color):
+    def __init__(self, root, text, width, primary_color, secondary_color, method_action):
         self.gradient_photo = self.create_gradient_image(width, 36, primary_color, secondary_color)
         self.gradient_photo_hover = self.create_gradient_image(width, 36, "#505050", "#292929")
+        self.method_action = method_action
         super().__init__(
             root,
             text=text,
@@ -139,6 +145,7 @@ class SpecialButton(tk.Menubutton):
             padx=2, 
             pady=2 
         )
+        
         self.secondary_color = secondary_color;
         self.set_events()
         
@@ -157,14 +164,15 @@ class SpecialButton(tk.Menubutton):
         
     def add_commands(self, commands):
         bold_font = ("Segoe UI", 10, "bold")  # Fuente en negrita
-        for command in commands:
+        for label, value in commands.items():
             self.menu.add_command(
-                label=command,
+                label=label,
                 background="#111111",
                 foreground="#ffffff",
                 activebackground="#333333",
                 activeforeground=self.secondary_color,
-                font=bold_font 
+                font=bold_font, 
+                command=lambda v=value: self.method_action(v)
             )
         
     def create_gradient_image(self, width, height, color1, color2):

@@ -122,17 +122,4 @@ def actualizar_procesos():
         process_data = get_processes()
         time.sleep(1)
 
-if __name__ == "__main__":
-    view = TaskManagerApp()
-
-    def update_and_refresh():
-        while True:
-            data = get_processes()
-            view.after(0, lambda d=data: view.insert_values(d))
-            time.sleep(1)
-
-    thread = Thread(target=update_and_refresh, daemon=True)
-    thread.start()
-
-    view.mainloop()
 

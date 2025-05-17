@@ -1,5 +1,5 @@
-from controller.Controlador import Controlador
+from controller.Controller import Controller
 
 if __name__ == "__main__":
-    app = Controlador()
+    app = Controller()
     app.run()

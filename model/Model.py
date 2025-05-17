@@ -8,11 +8,12 @@ import io
 import win32gui
 import os
 
-class Modelo:
+class Model:
     def __init__(self):
         self.process_data = []
-        self.ordenamiento = "cpu"
-        self.forma = "desc"
+        self.order_cryteria = "cpu"
+        self.order_method = "desc"
+        self.search_cryteria = ""
         self.icon_cache = {}
         self.previous_process_data = {}
         
@@ -57,6 +58,8 @@ class Modelo:
             "waiting": "Esperando"
         }
 
+        search = str(self.search_cryteria).lower().strip()
+
         for proc in psutil.process_iter(['pid', 'name', 'cpu_percent', 'memory_info', 'exe', 'create_time', 'status']):
             try:
                 info = proc.info
@@ -73,8 +76,14 @@ class Modelo:
 
                 current_process_data[pid] = (name, status, cpu, memory, uptime)
 
-                if pid not in self.previous_process_data or self.previous_process_data[pid] != current_process_data[pid]:
-                    process_matrix.append([pid, icon, name, status, cpu, memory, uptime])
+                # FILTRO: solo agrega si search está en el PID o en el nombre
+                if search:
+                    if search in str(pid).lower() or search in str(name).lower():
+                        if pid not in self.previous_process_data or self.previous_process_data[pid] != current_process_data[pid]:
+                            process_matrix.append([pid, icon, name, status, cpu, memory, uptime])
+                else:
+                    if pid not in self.previous_process_data or self.previous_process_data[pid] != current_process_data[pid]:
+                        process_matrix.append([pid, icon, name, status, cpu, memory, uptime])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
 
@@ -86,14 +95,22 @@ class Modelo:
 
         sort_index = {
             "pid": 0,
-            "nombre": 2,
-            "estado": 3,
+            "name": 2,
             "cpu": 4,
-            "memoria": 5,
-            "tiempo": 6
-        }.get(self.ordenamiento, 4)
+            "ram": 5,
+            "time": 6,
+        }.get(self.order_cryteria, 3)
 
-        if self.ordenamiento != "tiempo" or self.forma != "desc":
-            process_matrix.sort(key=lambda x: x[sort_index], reverse=(self.forma == "desc"))
+        if self.order_cryteria != "time" or self.order_method != "desc":
+            process_matrix.sort(key=lambda x: x[sort_index], reverse=(self.order_method == "desc"))
 
         return process_matrix
+    
+    def set_order_method(self, order_method):
+        self.order_method = order_method
+        
+    def set_order_cryteria(self, order_cryteria):
+        self.order_cryteria = order_cryteria
+        
+    def set_search_cryteria(self, search_cryteria):
+        self.search_cryteria = search_cryteria
