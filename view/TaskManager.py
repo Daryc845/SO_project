@@ -3,15 +3,22 @@ from tkinter import ttk, Menu
 from PIL import Image, ImageTk
 
 class TaskManagerApp(tk.Tk):
-    def __init__(self, set_order_method, set_order_cryteria, set_search_cryteria):
+    def __init__(self, set_order_method, set_order_cryteria, set_search_cryteria, 
+                 resume_process, suspend_process, terminate_process):
         super().__init__()
         self.title("Task Manager")
         self.geometry("950x540")
         self.configure(bg="#f7f9fa")
+        
+        # Callbacks del controlador
         self.set_order_method = set_order_method
         self.set_order_cryteria = set_order_cryteria
         self.set_search_cryteria = set_search_cryteria
-        self.icon_images = {}  # Para almacenar los íconos
+        self.resume_process = resume_process
+        self.suspend_process = suspend_process
+        self.terminate_process = terminate_process
+        
+        self.icon_images = {}
         self.create_widgets()
 
     def create_widgets(self):
@@ -32,11 +39,42 @@ class TaskManagerApp(tk.Tk):
         self.set_process_table_structure()
         
     def set_process_table_structure(self):
-        self.context_menu = Menu(self, tearoff=0, bg="#f7f9fa", fg="#222", font=("Segoe UI", 10))
-        self.context_menu.add_command(label="Reanudar proceso")
-        self.context_menu.add_command(label="Pausar proceso")
-        self.context_menu.add_command(label="Finalizar proceso")
+        self.context_menu = Menu(self, tearoff=0, bg="#111111", fg="#ffffff", font=("Segoe UI", 10))
+        self.context_menu.add_command(
+            label="Reanudar proceso",
+            command=self.resume_selected_process
+        )
+        self.context_menu.add_command(
+            label="Pausar proceso",
+            command=self.suspend_selected_process
+        )
+        self.context_menu.add_command(
+            label="Finalizar proceso",
+            command=self.terminate_selected_process
+        )
         self.tree.bind("<Button-3>", self.show_context_menu)
+
+    def get_selected_pid(self):
+        selection = self.tree.selection()
+        if selection:
+            item = self.tree.item(selection[0])
+            return int(item['values'][0])  # El PID es el primer valor
+        return None
+
+    def resume_selected_process(self):
+        pid = self.get_selected_pid()
+        if pid:
+            self.resume_process(pid)
+
+    def suspend_selected_process(self):
+        pid = self.get_selected_pid()
+        if pid:
+            self.suspend_process(pid)
+
+    def terminate_selected_process(self):
+        pid = self.get_selected_pid()
+        if pid:
+            self.terminate_process(pid)
         
     def set_process_table_style(self):
         style = ttk.Style()

@@ -6,9 +6,14 @@ from view.TaskManager import TaskManagerApp
 class Controller:
     def __init__(self):
         self.model = Model()
-        self.view = TaskManagerApp(self.set_order_method, self.set_order_cryteria, self.set_search_cryteria)
-        
-        # Iniciar el hilo de actualización
+        self.view = TaskManagerApp(
+            self.set_order_method,
+            self.set_order_cryteria,
+            self.set_search_cryteria,
+            self.resume_process,
+            self.suspend_process,
+            self.terminate_process
+        )
         self.start_update_thread()
         
     def start_update_thread(self):
@@ -40,3 +45,18 @@ class Controller:
     def update_view_once(self):
         data = self.model.get_processes()
         self.view.after(0, lambda d=data: self.view.insert_values(d))
+        
+    def resume_process(self, pid):
+        success = self.model.resume_process(pid)
+        if success:
+            self.update_view_once()
+
+    def suspend_process(self, pid):
+        success = self.model.suspend_process(pid)
+        if success:
+            self.update_view_once()
+
+    def terminate_process(self, pid):
+        success = self.model.terminate_process(pid)
+        if success:
+            self.update_view_once()
