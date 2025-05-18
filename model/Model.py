@@ -114,3 +114,30 @@ class Model:
         
     def set_search_cryteria(self, search_cryteria):
         self.search_cryteria = search_cryteria
+
+    def resume_process(self, pid):
+        try:
+            process = psutil.Process(pid)
+            process.resume()
+            return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+            print(f"Error al reanudar proceso {pid}: {e}")
+            return False
+
+    def suspend_process(self, pid):
+        try:
+            process = psutil.Process(pid)
+            process.suspend()
+            return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+            print(f"Error al pausar proceso {pid}: {e}")
+            return False
+
+    def terminate_process(self, pid):
+        try:
+            process = psutil.Process(pid)
+            process.terminate()
+            return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+            print(f"Error al terminar proceso {pid}: {e}")
+            return False
