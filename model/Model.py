@@ -16,6 +16,15 @@ class Model:
         self.search_cryteria = ""
         self.icon_cache = {}
         self.previous_process_data = {}
+        self.default_icon_img = None
+        self.set_default_icon()
+        
+    def set_default_icon(self):
+        try:
+            self.default_icon_img = Image.open("static/default.png").convert("RGBA")
+            self.default_icon_img = self.default_icon_img.resize((26, 26), Image.LANCZOS)
+        except Exception as e2:
+            print(f"Error cargando icono por defecto: {e2}")
         
     def get_icon_from_exe(self, exe_path, pid, process_name):
         key = (pid, process_name)
@@ -31,7 +40,7 @@ class Model:
                 bmp.CreateCompatibleBitmap(hdc, 32, 32)
                 hdc_mem = hdc.CreateCompatibleDC()
                 hdc_mem.SelectObject(bmp)
-                win32gui.DrawIconEx(hdc_mem.GetSafeHdc(), 0, 0, ico, 32, 32, 0, None, 3)
+                win32gui.DrawIconEx(hdc_mem.GetSafeHdc(), 0, 0, ico, 26, 26, 0, None, 3)
 
                 bmpinfo = bmp.GetInfo()
                 bmpstr = bmp.GetBitmapBits(True)
@@ -40,10 +49,14 @@ class Model:
                 DestroyIcon(ico)
                 self.icon_cache[key] = img
                 return img
+            else:
+                # Forzar excepción si no hay icono extraído
+                raise Exception("No se pudo extraer el icono")
         except Exception as e:
             print(f"Error obteniendo ícono para {exe_path}: {e}")
-            
-        return Image.new('RGBA', (32, 32), (255, 255, 255, 0))
+            self.icon_cache[key] = self.default_icon_img
+            return self.default_icon_img
+        
 
     def get_processes(self):
         current_process_data = {}
@@ -74,7 +87,7 @@ class Model:
                 uptime_seconds = int(now - create_time)
                 uptime = f"{uptime_seconds // 60}:{uptime_seconds % 60:02d}"
 
-                current_process_data[pid] = (name, status, cpu, memory, uptime)
+                current_process_data[pid] = (name, icon, status, cpu, memory, uptime)
 
                 # FILTRO: solo agrega si search está en el PID o en el nombre
                 if search:
@@ -101,8 +114,7 @@ class Model:
             "time": 6,
         }.get(self.order_cryteria, 3)
 
-        if self.order_cryteria != "time" or self.order_method != "desc":
-            process_matrix.sort(key=lambda x: x[sort_index], reverse=(self.order_method == "desc"))
+        process_matrix.sort(key=lambda x: x[sort_index], reverse=(self.order_method == "desc"))
 
         return process_matrix
     

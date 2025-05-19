@@ -8,7 +8,7 @@ class TaskManagerApp(tk.Tk):
         super().__init__()
         self.title("Task Manager")
         self.geometry("950x540")
-        self.configure(bg="#f7f9fa")
+        self.configure(bg="#0f0f0f")
         
         # Callbacks del controlador
         self.set_order_method = set_order_method
@@ -79,12 +79,14 @@ class TaskManagerApp(tk.Tk):
     def set_process_table_style(self):
         style = ttk.Style()
         style.theme_use("clam")
-        style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"), background="#e0e0e0", foreground="#222")
-        style.configure("Treeview", font=("Segoe UI", 10), background="#f7f9fa", foreground="#222", rowheight=28, fieldbackground="#f7f9fa")
+        style.configure("Treeview.Heading", font=("Segoe UI", 10, "bold"), background="#2c2c2c", foreground="#ffffff")
+        style.configure("Treeview", font=("Segoe UI", 10), background="#ffffff", foreground="#000000", rowheight=28, fieldbackground="#f7f9fa")
         style.map("Treeview", background=[("selected", "#b3d1ff")])
 
-        columns = ("PID", "Icono", "Nombre", "Estado", "%CPU", "%RAM", "Tiempo de ejecución")
-        self.tree = ttk.Treeview(self, columns=columns, show="headings", height=15)
+        columns = ("PID", "Nombre", "Estado", "%CPU", "%RAM", "Tiempo de ejecución")
+        self.tree = ttk.Treeview(self, columns=columns, show="tree headings", height=15)
+        self.tree.heading("#0", text="Icono")
+        self.tree.column("#0", width=50, anchor=tk.CENTER)
         for col in columns:
             self.tree.heading(col, text=col)
             self.tree.column(col, anchor=tk.CENTER, width=140)
@@ -134,27 +136,47 @@ class TaskManagerApp(tk.Tk):
         search_entry.bind("<FocusOut>", on_entry_focus_out)
     
     def add_buttons(self, header):
-        filterButton = SpecialButton(header, "🧹 Filtrar", 120, "#AA4AE2", "#FF00EA", self.set_order_cryteria)
-        filterButton.add_commands({"Por PID":"pid", "Por Nombre":"name", "Por %CPU":"cpu", "Por Tiempo de ejecución":"time", "Por %RAM":"ram"})
-        filterButton.pack(side=tk.RIGHT, padx=7, pady=10)
+        self.filterButton = SpecialButton(header, "🧹 Filtrar", 120, "#AA4AE2", "#FF00EA", self.set_order_cryteria, "cpu")
+        self.filterButton.add_commands({"Por PID":"pid", "Por Nombre":"name", "Por %CPU":"cpu", "Por Tiempo de ejecución":"time", "Por %RAM":"ram"})
+        self.filterButton.pack(side=tk.RIGHT, padx=7, pady=10)
         
-        orderButton = SpecialButton(header, "↕ Ordenar", 120, "#FF9900", "#E2DF4A", self.set_order_method)
-        orderButton.add_commands({"Descendente":"desc", "Ascendente":"asc"})
-        orderButton.pack(side=tk.RIGHT, padx=7, pady=10)
+        self.orderButton = SpecialButton(header, "↕ Ordenar", 120, "#FF9900", "#E2DF4A", self.set_order_method, "desc")
+        self.orderButton.add_commands({"Descendente":"desc", "Ascendente":"asc"})
+        self.orderButton.pack(side=tk.RIGHT, padx=7, pady=10)
     
     def insert_values(self, matrix):
-        for item in self.tree.get_children():
-            self.tree.delete(item)
-            
-        for row in matrix:
+        current_iids = list(self.tree.get_children())
+        num_current = len(current_iids)
+        num_new = len(matrix)
+
+        # Reutiliza filas existentes y actualiza sus valores
+        for idx, row in enumerate(matrix):
             pid, icon, name, status, cpu, memory, uptime = row
-            # Convertir la imagen PIL a PhotoImage
+            photo = None
             if isinstance(icon, Image.Image):
+                
                 photo = ImageTk.PhotoImage(icon)
+                
                 self.icon_images[pid] = photo
-                self.tree.insert("", tk.END, values=(pid, "", name, status, cpu, memory, uptime), image=photo)
+
+            values = (pid, name, status, cpu, memory, uptime)
+
+            if idx < num_current:
+                iid = current_iids[idx]
+                self.tree.item(iid, values=values, image=photo)
             else:
-                self.tree.insert("", tk.END, values=row)
+                # Si hay más datos nuevos que filas, inserta nuevas filas
+                self.tree.insert("", tk.END, values=values, image=photo)
+
+        # Si hay más filas que datos nuevos, elimina las filas sobrantes
+        for iid in current_iids[num_new:]:
+            self.tree.delete(iid)     
+            
+    def set_selected_order_method(self, order_method):
+        self.orderButton.set_active_command(order_method) 
+        
+    def set_selected_order_cryteria(self, order_cryteria):
+        self.filterButton.set_active_command(order_cryteria)        
 
     def show_context_menu(self, event):
         row_id = self.tree.identify_row(event.y)
@@ -163,10 +185,11 @@ class TaskManagerApp(tk.Tk):
             self.context_menu.tk_popup(event.x_root, event.y_root)
             
 class SpecialButton(tk.Menubutton):
-    def __init__(self, root, text, width, primary_color, secondary_color, method_action):
+    def __init__(self, root, text, width, primary_color, secondary_color, method_action, active_command=None):
         self.gradient_photo = self.create_gradient_image(width, 36, primary_color, secondary_color)
         self.gradient_photo_hover = self.create_gradient_image(width, 36, "#505050", "#292929")
         self.method_action = method_action
+        self.active_command = active_command
         super().__init__(
             root,
             text=text,
@@ -199,19 +222,25 @@ class SpecialButton(tk.Menubutton):
 
         self.bind("<Enter>", on_enter)
         self.bind("<Leave>", on_leave)
+    
+    def set_active_command(self, active_command):
+        self.active_command = active_command
         
     def add_commands(self, commands):
-        bold_font = ("Segoe UI", 10, "bold")  # Fuente en negrita
+        self.order_var = tk.StringVar(value=self.active_command)
+        bold_font = ("Segoe UI", 10, "bold")
         for label, value in commands.items():
-            self.menu.add_command(
-                label=label,
-                background="#111111",
-                foreground="#ffffff",
-                activebackground="#333333",
-                activeforeground=self.secondary_color,
-                font=bold_font, 
-                command=lambda v=value: self.method_action(v)
-            )
+            self.menu.add_radiobutton(
+            label=label,
+            variable=self.order_var,
+            value=value,
+            background="#E4E4E4",
+            foreground="#000000",
+            activebackground="#333333",
+            activeforeground=self.secondary_color,
+            font=bold_font,
+            command=lambda v=value: self.method_action(v)
+    )
         
     def create_gradient_image(self, width, height, color1, color2):
         base = Image.new('RGB', (width, height), color1)

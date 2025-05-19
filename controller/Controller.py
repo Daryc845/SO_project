@@ -31,11 +31,11 @@ class Controller:
         
     def set_order_method(self, order_method):
         self.model.set_order_method(order_method)
-        self.update_view_once()
+        self.model.set_order_method(order_method)
         
     def set_order_cryteria(self, order_cryteria):
         self.model.set_order_cryteria(order_cryteria)
-        self.update_view_once()
+        self.model.set_order_cryteria(order_cryteria)
         
     def set_search_cryteria(self, search_cryteria):
         self.model.set_search_cryteria(search_cryteria)
