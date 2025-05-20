@@ -9,10 +9,18 @@ import win32gui
 import os
 
 class Model:
+    """
+    Clase que maneja la lógica de negocio relacionada con los procesos del sistema.
+    Gestiona la obtención, filtrado, ordenamiento y manipulación de procesos.
+    """
+
     def __init__(self):
+        """
+        Inicializa el modelo con los valores predeterminados y estructuras de datos necesarias.
+        """
         self.process_data = []
         self.order_cryteria = "cpu"
-        self.order_method = "desc"
+        self.order_method = "desc" 
         self.search_cryteria = ""
         self.icon_cache = {}
         self.previous_process_data = {}
@@ -20,6 +28,10 @@ class Model:
         self.set_default_icon()
         
     def set_default_icon(self):
+        """
+        Carga el ícono predeterminado desde un archivo o crea uno si no existe.
+        Este ícono se usa cuando no se puede extraer el ícono de un proceso.
+        """
         try:
             self.default_icon_img = Image.open("static/default.png").convert("RGBA")
             self.default_icon_img = self.default_icon_img.resize((26, 26), Image.LANCZOS)
@@ -27,6 +39,17 @@ class Model:
             print(f"Error cargando icono por defecto: {e2}")
         
     def get_icon_from_exe(self, exe_path, pid, process_name):
+        """
+        Extrae el ícono de un archivo ejecutable y lo almacena en caché.
+        
+        Args:
+            exe_path (str): Ruta al archivo ejecutable del proceso
+            pid (int): ID del proceso
+            process_name (str): Nombre del proceso
+            
+        Returns:
+            Image: Objeto de imagen PIL con el ícono del proceso
+        """
         key = (pid, process_name)
         if key in self.icon_cache:
             return self.icon_cache[key]
@@ -59,6 +82,12 @@ class Model:
         
 
     def get_processes(self):
+        """
+        Obtiene la lista de procesos del sistema, aplicando filtros y ordenamiento.
+        
+        Returns:
+            list: Matrix con los datos de los procesos [pid, icon, name, status, cpu, memory, uptime]
+        """
         current_process_data = {}
         process_matrix = []
         estado_traducciones = {
@@ -119,15 +148,42 @@ class Model:
         return process_matrix
     
     def set_order_method(self, order_method):
+        """
+        Establece el método de ordenamiento para la lista de procesos.
+        
+        Args:
+            order_method (str): Método de ordenamiento ('asc' o 'desc')
+        """
         self.order_method = order_method
         
     def set_order_cryteria(self, order_cryteria):
+        """
+        Establece el criterio de ordenamiento para la lista de procesos.
+        
+        Args:
+            order_cryteria (str): Criterio de ordenamiento ('pid', 'name', 'cpu', 'ram', 'time')
+        """
         self.order_cryteria = order_cryteria
         
     def set_search_cryteria(self, search_cryteria):
+        """
+        Establece el criterio de búsqueda para filtrar procesos.
+        
+        Args:
+            search_cryteria (str): Texto a buscar en el PID o nombre del proceso
+        """
         self.search_cryteria = search_cryteria
 
     def resume_process(self, pid):
+        """
+        Reanuda un proceso que está pausado.
+        
+        Args:
+            pid (int): ID del proceso a reanudar
+            
+        Returns:
+            bool: True si se reanudó exitosamente, False en caso contrario
+        """
         try:
             process = psutil.Process(pid)
             process.resume()
@@ -137,6 +193,15 @@ class Model:
             return False
 
     def suspend_process(self, pid):
+        """
+        Pausa un proceso en ejecución.
+        
+        Args:
+            pid (int): ID del proceso a pausar
+            
+        Returns:
+            bool: True si se pausó exitosamente, False en caso contrario
+        """
         try:
             process = psutil.Process(pid)
             process.suspend()
@@ -146,6 +211,15 @@ class Model:
             return False
 
     def terminate_process(self, pid):
+        """
+        Finaliza un proceso.
+        
+        Args:
+            pid (int): ID del proceso a terminar
+            
+        Returns:
+            bool: True si se terminó exitosamente, False en caso contrario
+        """
         try:
             process = psutil.Process(pid)
             process.terminate()
