@@ -1,1 +1,4 @@
-//AÑADIR LAS LIBRERIAS UTILIZADAS AQUI
+Flask
+psutil
+Pillow
+pywin32
