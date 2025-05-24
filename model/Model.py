@@ -76,7 +76,6 @@ class Model:
                 # Forzar excepción si no hay icono extraído
                 raise Exception("No se pudo extraer el icono")
         except Exception as e:
-            print(f"Error obteniendo ícono para {exe_path}: {e}")
             self.icon_cache[key] = self.default_icon_img
             return self.default_icon_img
         
