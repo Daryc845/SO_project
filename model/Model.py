@@ -73,7 +73,6 @@ class Model:
                 self.icon_cache[key] = img
                 return img
             else:
-                # Forzar excepción si no hay icono extraído
                 raise Exception("No se pudo extraer el icono")
         except Exception as e:
             self.icon_cache[key] = self.default_icon_img
@@ -117,7 +116,6 @@ class Model:
 
                 current_process_data[pid] = (name, icon, status, cpu, memory, uptime)
 
-                # FILTRO: solo agrega si search está en el PID o en el nombre
                 if search:
                     if search in str(pid).lower() or search in str(name).lower():
                         if pid not in self.previous_process_data or self.previous_process_data[pid] != current_process_data[pid]:

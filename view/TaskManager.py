@@ -127,7 +127,7 @@ class TaskManagerApp(tk.Tk):
         Args:
             self.search_entry (tk.Entry): Campo de entrada de búsqueda.
         """
-        self.search_entry.insert(0, "Digite el PID o nombre del proceso...")  # Placeholder inicial
+        self.search_entry.insert(0, "Digite el PID o nombre del proceso...")
         self.search_entry.bind("<FocusIn>", self.on_entry_focus_in)
         self.search_entry.bind("<FocusOut>", self.on_entry_focus_out)
     
